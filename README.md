@@ -36,7 +36,9 @@ This project expects a local Citadel binary at `./bin/citadel`.
 ```bash
 git clone https://github.com/TryMightyAI/citadel
 cd citadel
-go build -o ../cline-mighty-guardrails/bin/citadel ./cmd/gateway
+# Build into this repo's ./bin/citadel
+export GUARDRAILS_DIR="<REPO_ROOT>"
+go build -o "${GUARDRAILS_DIR}/bin/citadel" ./cmd/gateway
 ```
 
 Notes:
@@ -45,7 +47,7 @@ Notes:
 ### 2) Start Citadel server
 
 ```bash
-cd cline-mighty-guardrails
+cd <REPO_ROOT>
 ./scripts/run-citadel.sh
 ```
 
@@ -69,11 +71,14 @@ Do not assume a specific hooks path. Use a placeholder:
 
 - `<CLINE_HOOKS_DIR>`: your Cline hooks directory (global or project)
 
-Example install command (hook name is arbitrary; it just needs to be executable):
+In many Cline versions, the hook script is loaded by **hook type filename** (for example: `PreToolUse`).
+
+Recommended install command (global hooks on macOS):
 
 ```bash
-cp scripts/cline-pretooluse-guard.sh <CLINE_HOOKS_DIR>/mighty-guardrails
-chmod +x <CLINE_HOOKS_DIR>/mighty-guardrails
+mkdir -p "$HOME/Documents/Cline/Hooks"
+cp scripts/cline-pretooluse-guard.sh "$HOME/Documents/Cline/Hooks/PreToolUse"
+chmod +x "$HOME/Documents/Cline/Hooks/PreToolUse"
 ```
 
 Common locations (verify in your Cline version):
@@ -83,14 +88,14 @@ Common locations (verify in your Cline version):
 ### 4) Enable it in Cline
 
 1. Enable Hooks in Cline settings.
-2. Open Cline "Hooks" UI, find `mighty-guardrails` under `PreToolUse` hooks, and toggle it on.
+2. Open Cline "Hooks" UI and toggle **PreToolUse** on.
 
 ## Demo In 60 Seconds
 
 From this repo:
 
 ```bash
-cd cline-mighty-guardrails
+cd <REPO_ROOT>
 ./scripts/setup.sh
 ./scripts/demo-local.sh
 ```
@@ -101,8 +106,8 @@ The demo harness runs 3 cases:
 - allows a benign `console.log(...)`
 
 More complete docs:
-- `/Users/munamwasi/Projects/Cline-Hackathon/cline-mighty-guardrails/docs/GETTING_STARTED.md`
-- `/Users/munamwasi/Projects/Cline-Hackathon/cline-mighty-guardrails/docs/CLINE_SETUP.md`
+- `docs/GETTING_STARTED.md`
+- `docs/CLINE_SETUP.md`
 
 ## Troubleshooting
 

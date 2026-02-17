@@ -10,7 +10,7 @@ This project is a **Cline PreToolUse guardrails hook**. You can demo it locally 
 Verify:
 
 ```bash
-cd /Users/munamwasi/Projects/Cline-Hackathon/cline-mighty-guardrails
+cd <REPO_ROOT>
 ./scripts/setup.sh
 ```
 
@@ -19,7 +19,7 @@ cd /Users/munamwasi/Projects/Cline-Hackathon/cline-mighty-guardrails
 Runs 3 simulated tool invocations through the hook and checks PASS/FAIL.
 
 ```bash
-cd /Users/munamwasi/Projects/Cline-Hackathon/cline-mighty-guardrails
+cd <REPO_ROOT>
 ./scripts/demo-local.sh
 ```
 
@@ -39,7 +39,7 @@ Important:
 - Prefer exporting env vars in the same shell you use to launch the demo.
 
 ```bash
-cd /Users/munamwasi/Projects/Cline-Hackathon/cline-mighty-guardrails
+cd <REPO_ROOT>
 
 export MIGHTY_API_KEY="YOUR_KEY"
 export MIGHTY_PREFER_GATEWAY=1
@@ -61,13 +61,14 @@ Build:
 ```bash
 git clone https://github.com/TryMightyAI/citadel
 cd citadel
-go build -o /Users/munamwasi/Projects/Cline-Hackathon/cline-mighty-guardrails/bin/citadel ./cmd/gateway
+export GUARDRAILS_DIR="<REPO_ROOT>"
+go build -o "${GUARDRAILS_DIR}/bin/citadel" ./cmd/gateway
 ```
 
 Run:
 
 ```bash
-cd /Users/munamwasi/Projects/Cline-Hackathon/cline-mighty-guardrails
+cd <REPO_ROOT>
 ./scripts/run-citadel.sh
 ```
 
@@ -79,5 +80,4 @@ Then re-run:
 
 ## 4) Install Into Cline
 
-Follow `/Users/munamwasi/Projects/Cline-Hackathon/cline-mighty-guardrails/docs/CLINE_SETUP.md`.
-
+Follow `docs/CLINE_SETUP.md`.
