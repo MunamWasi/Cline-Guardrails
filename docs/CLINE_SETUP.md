@@ -65,7 +65,19 @@ export CITADEL_DEBUG=1
 
 Expected:
 - The tool call is cancelled before execution.
-- The error message includes “Blocked: detected curl | sh …” (regex fallback) or “Blocked by Mighty Gateway …” / “Blocked by Citadel (local) …”.
+- The hook returns a short `errorMessage` like:
+  - `Blocked execute_command by Mighty Gateway ...`
+  - `Blocked execute_command by Citadel (local) ...`
+  - `Blocked: detected curl | sh ...` (regex fallback)
+
+3. Multimodal block test (requires `MIGHTY_API_KEY`):
+- Put a test image in your repo, for example `./sephora.png`.
+- Ask Cline to run:
+  - `./scripts/test-mighty-multimodal.sh ./sephora.png`
+
+Expected:
+- The **PreToolUse hook cancels the command before it runs**.
+- You see a short reason like `Blocked execute_command by Mighty Gateway (multimodal): prompt injection detected (sephora.png)`.
 
 ## F) Common Problems
 

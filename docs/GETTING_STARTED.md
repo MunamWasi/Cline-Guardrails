@@ -52,6 +52,18 @@ In the printed JSON, confirm:
 - `debug.backend` is `mighty-gateway`
 - `debug.httpCode` is `200`
 
+## 2b) Test Multimodal Scanning (Image/PDF)
+
+Pick any image or PDF on your machine (for example, a screenshot). Then:
+
+```bash
+cd <REPO_ROOT>
+export MIGHTY_API_KEY="YOUR_KEY"
+./scripts/test-mighty-multimodal.sh /path/to/screenshot.png
+```
+
+This calls the hosted Gateway `/v1/scan` with `content` as base64 and prints a compact summary (`action`, `risk_level`, `risk_score`, etc.).
+
 ## 3) Demo With Local Citadel (Optional)
 
 If you want fully local scanning, build Citadel OSS and run the local sidecar.

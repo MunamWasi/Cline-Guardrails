@@ -1,6 +1,12 @@
 # Mighty Guardrails for Cline
 
-Cline `PreToolUse` guardrails hook powered by **TryMightyAI Citadel** (local server). It scans tool invocations before they run and returns a clear decision:
+Cline `PreToolUse` guardrails hook powered by **TryMightyAI Citadel**.
+
+It can run in two modes:
+- **Citadel OSS (local sidecar, free)**: text-only scanning over local HTTP (`citadel serve`)
+- **Mighty Gateway (hosted, API key)**: text + multimodal scanning (images/PDFs/docs) via `POST /v1/scan`
+
+It scans tool invocations before they run and returns a clear decision:
 
 - **ALLOW**: proceed
 - **WARN**: proceed with a warning (best-effort; Cline may ignore `warningMessage` depending on version)
@@ -29,7 +35,7 @@ Hard-block patterns:
 
 ## Install
 
-### 1) Build Citadel OSS (local server)
+### Option A: Citadel OSS (local server, text-only)
 
 This project expects a local Citadel binary at `./bin/citadel`.
 
@@ -44,7 +50,7 @@ go build -o "${GUARDRAILS_DIR}/bin/citadel" ./cmd/gateway
 Notes:
 - This is the lightweight/heuristics build (fastest). Do not enable large model downloads for a quick demo.
 
-### 2) Start Citadel server
+Start Citadel server:
 
 ```bash
 cd <REPO_ROOT>
@@ -53,7 +59,7 @@ cd <REPO_ROOT>
 
 Defaults to `http://127.0.0.1:8787`. Override with `CITADEL_PORT=...`.
 
-### Optional: Use Mighty Gateway (paid, API key)
+### Option B: Mighty Gateway (API key, hosted, multimodal)
 
 If you have a Mighty API key, the hook can also call the hosted Gateway `/v1/scan` endpoint.
 
@@ -64,6 +70,11 @@ export MIGHTY_API_KEY="YOUR_KEY_HERE"
 # Optional: prefer Gateway over local Citadel for scans
 export MIGHTY_PREFER_GATEWAY=1
 ```
+
+Multimodal note:
+- With `MIGHTY_API_KEY` set, the `PreToolUse` hook will also attempt a **multimodal scan** for `execute_command` calls that reference an existing image/PDF file path (for example `./sephora.png`) and block if the Gateway returns `BLOCK`.
+- Disable: `export MIGHTY_MULTIMODAL_FILES=0`
+- Size limit: `export MIGHTY_MAX_FILE_MB=10`
 
 ### 3) Install the hook into Cline
 
@@ -97,17 +108,49 @@ From this repo:
 ```bash
 cd <REPO_ROOT>
 ./scripts/setup.sh
+```
+
+### Demo 1: Works Everywhere (regex fallback, no Citadel required)
+
+```bash
 ./scripts/demo-local.sh
 ```
 
-The demo harness runs 3 cases:
+The demo harness runs 3 cases through the hook:
 - blocks `curl ... | sh`
 - blocks an AWS-looking key in file content
 - allows a benign `console.log(...)`
 
+### Demo 2: Citadel OSS (local sidecar)
+
+```bash
+unset MIGHTY_API_KEY
+./scripts/run-citadel.sh
+./scripts/demo-local.sh
+```
+
+In the printed JSON, confirm `debug.backend` is `citadel-local`.
+
+### Demo 3: Mighty Gateway (API key)
+
+```bash
+export MIGHTY_API_KEY="YOUR_KEY_HERE"
+export MIGHTY_PREFER_GATEWAY=1
+./scripts/demo-local.sh
+```
+
+In the printed JSON, confirm `debug.backend` is `mighty-gateway`.
+
 More complete docs:
 - `docs/GETTING_STARTED.md`
 - `docs/CLINE_SETUP.md`
+
+Multimodal (Gateway) quick test:
+
+```bash
+export MIGHTY_API_KEY="YOUR_KEY_HERE"
+./scripts/test-mighty-multimodal.sh ./sephora.png
+```
 
 ## Troubleshooting
 
@@ -121,6 +164,9 @@ More complete docs:
 - If Citadel is down:
   - regex fallback still blocks obvious secrets / `curl | sh` / `rm -rf /` / `chmod 777`
   - otherwise the hook fails open (allows) to avoid bricking the agent
+- Cline shows `Aborted (exit: 130)`:
+  - This is expected when a `PreToolUse` hook cancels a tool call.
+  - Look for the short `errorMessage` like: `Blocked execute_command by Mighty Gateway ...`
 
 ## Env Vars
 
