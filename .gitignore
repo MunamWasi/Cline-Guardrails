@@ -5,5 +5,7 @@
 # Secrets / local env (never commit)
 .env
 .env.*
+.envrc
+.envrc.*
 !.env.example
 !.env.template

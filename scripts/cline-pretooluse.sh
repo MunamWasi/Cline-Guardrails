@@ -57,6 +57,7 @@ workspace_root="$(json_get '.workspaceRoots[0] // .workspacePath // .cwd // .pro
 if [[ -z "${workspace_root}" ]]; then
   workspace_root="$(pwd 2>/dev/null || echo "")"
 fi
+repo_root="$(cd "${SCRIPT_DIR}/.." 2>/dev/null && pwd || true)"
 
 dotenv_set_if_empty() {
   local key="$1"
@@ -104,9 +105,22 @@ load_dotenv_file() {
   done <"${file}"
 }
 
-if [[ -n "${workspace_root}" ]]; then
-  load_dotenv_file "${workspace_root%/}/.env"
-fi
+load_dotenv_candidates() {
+  local f
+  if [[ -n "${workspace_root}" ]]; then
+    load_dotenv_file "${workspace_root%/}/.env"
+    load_dotenv_file "${workspace_root%/}/.env.local"
+  fi
+  if [[ -n "${repo_root}" ]]; then
+    load_dotenv_file "${repo_root%/}/.env"
+    load_dotenv_file "${repo_root%/}/.env.local"
+  fi
+  for f in "${HOME}/Documents/Cline/.env" "${HOME}/.env"; do
+    load_dotenv_file "${f}"
+  done
+}
+
+load_dotenv_candidates
 
 # Mode control for pro vs oss.
 mode_lc="$(printf '%s' "${MIGHTY_MODE:-}" | tr '[:upper:]' '[:lower:]')"
@@ -240,7 +254,7 @@ else
     reason="${safe_stderr}"
   fi
 
-  if printf '%s' "${reason}" | grep -Eiq 'blocked|block(ed)? by|dangerous command|detected curl[[:space:]]*\|[[:space:]]*sh'; then
+  if printf '%s' "${reason}" | grep -Eiq 'blocked|block(ed)? by|dangerous command|detected curl[[:space:]]*[|][[:space:]]*sh'; then
     decision="block"
   elif printf '%s' "${reason}" | grep -Eiq 'warn|warning'; then
     decision="warn"
@@ -267,7 +281,7 @@ if [[ -z "${confidence}" ]]; then
 fi
 
 if [[ "${decision}" == "block" ]]; then
-  if printf '%s' "${reason}" | grep -Eiq 'detected curl[[:space:]]*\|[[:space:]]*sh|curl[[:space:]]*\|[[:space:]]*sh'; then
+  if printf '%s' "${reason}" | grep -Eiq 'detected curl[[:space:]]*[|][[:space:]]*sh|curl[[:space:]]*[|][[:space:]]*sh'; then
     block_msg="Blocked by Host Guardrails (Cline): ${reason}"
   else
     block_msg="Blocked by Mighty Guardrails (confidence: ${confidence}): ${reason}"
