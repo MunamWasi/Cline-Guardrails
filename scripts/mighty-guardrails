@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+# Internal guardrails scanner entrypoint.
+# The stable Cline hook runner (`cline-pretooluse.sh`) calls this script.
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+exec "${SCRIPT_DIR}/cline-pretooluse-guard.sh"

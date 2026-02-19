@@ -1,95 +1,60 @@
-# Getting Started (Anyone Can Demo)
+# Getting Started
 
-This project is a **Cline PreToolUse guardrails hook**. You can demo it locally without Cline, and then install it into Cline.
-
-## 0) Prereqs
-
-- macOS or Linux
-- `bash`, `jq`, `curl`
-
-Verify:
+## Fast path
 
 ```bash
-cd <REPO_ROOT>
+cd /absolute/path/to/cline-mighty-guardrails/Cline-Hackathon
 ./scripts/setup.sh
-```
-
-## 1) Fastest Demo (No Cline Required)
-
-Runs 3 simulated tool invocations through the hook and checks PASS/FAIL.
-
-```bash
-cd <REPO_ROOT>
 ./scripts/demo-local.sh
 ```
 
-Expected behavior:
-- Unsafe `curl ... | sh` -> `{"cancel": true, ...}`
-- Secret-looking AWS key -> `{"cancel": true, ...}`
-- Benign write -> `{"cancel": false, ...}`
+Expected:
+- unsafe `curl | sh` input is blocked
+- secret-looking key write is blocked
+- benign write is allowed
 
-This works even if Citadel is not installed, because the hook has a small regex hard-block fallback.
+## Choose backend mode
 
-## 2) Demo With Mighty Gateway (Hosted, API Key)
-
-If you have a Mighty API key, the hook can call the hosted Gateway (`/v1/scan`).
-
-Important:
-- Do not paste API keys into files or commit them.
-- Prefer exporting env vars in the same shell you use to launch the demo.
+### OSS mode (local Citadel sidecar)
 
 ```bash
-cd <REPO_ROOT>
-
-export MIGHTY_API_KEY="YOUR_KEY"
-export MIGHTY_PREFER_GATEWAY=1
-export CITADEL_DEBUG=1
-
-./scripts/demo-local.sh
-```
-
-In the printed JSON, confirm:
-- `debug.backend` is `mighty-gateway`
-- `debug.httpCode` is `200`
-
-## 2b) Test Multimodal Scanning (Image/PDF)
-
-Pick any image or PDF on your machine (for example, a screenshot). Then:
-
-```bash
-cd <REPO_ROOT>
-export MIGHTY_API_KEY="YOUR_KEY"
-./scripts/test-mighty-multimodal.sh /path/to/screenshot.png
-```
-
-This calls the hosted Gateway `/v1/scan` with `content` as base64 and prints a compact summary (`action`, `risk_level`, `risk_score`, etc.).
-
-## 3) Demo With Local Citadel (Optional)
-
-If you want fully local scanning, build Citadel OSS and run the local sidecar.
-
-Build:
-
-```bash
+# build once
 git clone https://github.com/TryMightyAI/citadel
 cd citadel
-export GUARDRAILS_DIR="<REPO_ROOT>"
-go build -o "${GUARDRAILS_DIR}/bin/citadel" ./cmd/gateway
-```
+go build -o /absolute/path/to/cline-mighty-guardrails/Cline-Hackathon/bin/citadel ./cmd/gateway
 
-Run:
-
-```bash
-cd <REPO_ROOT>
+# run sidecar
+cd /absolute/path/to/cline-mighty-guardrails/Cline-Hackathon
 ./scripts/run-citadel.sh
 ```
 
-Then re-run:
+Use `.env`:
 
-```bash
-./scripts/demo-local.sh
+```dotenv
+MIGHTY_MODE=oss
+MIGHTY_WARN_THRESHOLD=0.70
+MIGHTY_BLOCK_THRESHOLD=0.85
 ```
 
-## 4) Install Into Cline
+### PRO mode (Mighty Gateway API key)
 
-Follow `docs/CLINE_SETUP.md`.
+Use `.env`:
+
+```dotenv
+MIGHTY_MODE=pro
+MIGHTY_API_KEY=your_key_here
+MIGHTY_WARN_THRESHOLD=0.70
+MIGHTY_BLOCK_THRESHOLD=0.85
+```
+
+Multimodal test:
+
+```bash
+./scripts/test-mighty-multimodal.sh /absolute/path/to/file.png
+```
+
+## Hook scripts to use in Cline
+
+Use the robust runner, not the raw scanner:
+- `/absolute/path/to/cline-mighty-guardrails/Cline-Hackathon/scripts/cline-pretooluse.sh`
+- `/absolute/path/to/cline-mighty-guardrails/Cline-Hackathon/scripts/cline-taskcancel.sh`

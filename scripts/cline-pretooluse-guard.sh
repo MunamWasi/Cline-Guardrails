@@ -16,6 +16,80 @@ stderr_log() {
   fi
 }
 
+dotenv_set_if_empty() {
+  # Load only known-safe keys from .env files. Never echo values.
+  local key="$1"
+  local val="$2"
+
+  case "${key}" in
+    MIGHTY_API_KEY | MIGHTY_GATEWAY_URL | MIGHTY_PREFER_GATEWAY | MIGHTY_PROFILE | MIGHTY_ANALYSIS_MODE | MIGHTY_MULTIMODAL_FILES | MIGHTY_MAX_FILE_MB | MIGHTY_TIMEOUT_SECONDS | MIGHTY_CONTEXT | MIGHTY_CONTENT_TYPE | MIGHTY_THRESHOLD_MODE | MIGHTY_BLOCK_CONFIDENCE_PCT | MIGHTY_WARN_CONFIDENCE_PCT | CITADEL_PORT | CITADEL_MODE | CITADEL_TIMEOUT_SECONDS | CITADEL_DEBUG)
+      ;;
+    *)
+      return 0
+      ;;
+  esac
+
+  if [[ -z "${!key-}" && -n "${val}" ]]; then
+    export "${key}=${val}"
+  fi
+}
+
+load_dotenv_file() {
+  local file="$1"
+  [[ -f "${file}" ]] || return 0
+
+  local line key val
+  while IFS= read -r line || [[ -n "${line}" ]]; do
+    # Trim CR (Windows) + surrounding whitespace.
+    line="${line%%$'\r'}"
+    line="$(printf '%s' "${line}" | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//')"
+
+    [[ -z "${line}" ]] && continue
+    [[ "${line}" == \#* ]] && continue
+
+    # Allow "export KEY=VAL" and "KEY=VAL".
+    line="${line#export }"
+
+    if [[ "${line}" =~ ^([A-Za-z_][A-Za-z0-9_]*)[[:space:]]*=[[:space:]]*(.*)$ ]]; then
+      key="${BASH_REMATCH[1]}"
+      val="${BASH_REMATCH[2]}"
+
+      # Strip trailing comments for unquoted values.
+      if [[ "${val}" != \"*\" && "${val}" != \'*\' ]]; then
+        val="${val%%#*}"
+      fi
+
+      # Trim again.
+      val="$(printf '%s' "${val}" | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//')"
+
+      # Strip surrounding quotes if present.
+      if [[ "${val}" =~ ^\".*\"$ ]]; then
+        val="${val:1:${#val}-2}"
+      elif [[ "${val}" =~ ^\'.*\'$ ]]; then
+        val="${val:1:${#val}-2}"
+      fi
+
+      dotenv_set_if_empty "${key}" "${val}"
+    fi
+  done <"${file}"
+}
+
+load_dotenv() {
+  # Best-effort .env loading so hooks work even when VS Code doesn't inherit shell env.
+  local base_dir="$1"
+
+  local candidates=()
+  if [[ -n "${base_dir}" ]]; then
+    candidates+=("${base_dir%/}/.env" "${base_dir%/}/.env.local")
+  fi
+  candidates+=("${HOME}/Documents/Cline/.env" "${HOME}/.env")
+
+  local f
+  for f in "${candidates[@]}"; do
+    load_dotenv_file "${f}"
+  done
+}
+
 one_line() {
   # Normalize text into a single readable line (no newlines, collapsed whitespace).
   local msg="$1"
@@ -67,6 +141,10 @@ humanize_reason() {
   truncate_one_line "${out}" 160
 }
 
+is_number() {
+  [[ "${1:-}" =~ ^[0-9]+([.][0-9]+)?$ ]]
+}
+
 fail_open() {
   printf '%s\n' '{"cancel":false}'
 }
@@ -100,6 +178,8 @@ repo="$(
 if [[ -z "${repo}" ]]; then
   repo="$(pwd 2>/dev/null || echo "")"
 fi
+
+load_dotenv "${repo}"
 
 payload=""
 case "${tool}" in
@@ -153,6 +233,13 @@ debug_scan_url="${local_citadel_base_url}"
 debug_scan_endpoint=""
 debug_scan_backend=""
 debug_scan_http="000"
+debug_scan_decision=""
+debug_scan_category=""
+debug_scan_confidence_pct=""
+debug_scan_risk_score=""
+debug_scan_scan_id=""
+debug_scan_file=""
+debug_scan_evidence=""
 
 emit() {
   local cancel_json="$1"        # true|false
@@ -169,6 +256,13 @@ emit() {
     --arg citadelEndpoint "${debug_scan_endpoint}" \
     --arg citadelBackend "${debug_scan_backend}" \
     --arg citadelHttp "${debug_scan_http}" \
+    --arg decision "${debug_scan_decision}" \
+    --arg category "${debug_scan_category}" \
+    --arg confidencePct "${debug_scan_confidence_pct}" \
+    --arg riskScore "${debug_scan_risk_score}" \
+    --arg scanId "${debug_scan_scan_id}" \
+    --arg scannedFile "${debug_scan_file}" \
+    --arg evidence "${debug_scan_evidence}" \
     --argjson cancel "${cancel_json}" \
     --argjson includeDebug "${debug_enabled}" \
     --argjson citadelUsed "${citadel_used_json}" \
@@ -178,7 +272,21 @@ emit() {
         + (if ($errorMessage|length) > 0 then {errorMessage:$errorMessage} else {} end)
         + (if ($contextModification|length) > 0 then {contextModification:$contextModification} else {} end)
       )
-      + (if $includeDebug then {debug:{citadelUsed:$citadelUsed,citadelOk:$citadelOk,citadelUrl:$citadelUrl,tool:$tool,backend:$citadelBackend,endpoint:$citadelEndpoint,httpCode:$citadelHttp}} else {} end)
+      + (if $includeDebug then
+          {debug:(
+            {citadelUsed:$citadelUsed,citadelOk:$citadelOk,citadelUrl:$citadelUrl,tool:$tool,backend:$citadelBackend,endpoint:$citadelEndpoint,httpCode:$citadelHttp}
+            + {scan:(
+              {}
+              + (if ($decision|length) > 0 then {decision:$decision} else {} end)
+              + (if ($category|length) > 0 then {category:$category} else {} end)
+              + (if ($confidencePct|length) > 0 then {confidencePct:$confidencePct} else {} end)
+              + (if ($riskScore|length) > 0 then {riskScore:$riskScore} else {} end)
+              + (if ($scanId|length) > 0 then {scanId:$scanId} else {} end)
+              + (if ($scannedFile|length) > 0 then {file:$scannedFile} else {} end)
+              + (if ($evidence|length) > 0 then {evidence:$evidence} else {} end)
+            )}
+          )}
+        else {} end)
     )'
 }
 
@@ -498,6 +606,36 @@ elif [[ "${scan_backend}" == "citadel-local" ]]; then
   scanner_name="Citadel (local)"
 fi
 
+risk_score="$(
+  jq -r '(.risk_score // .result.risk_score // "")' <<<"${scan_response}" 2>/dev/null || true
+)"
+top_confidence="$(
+  jq -r '
+    if ((.threats|type)=="array" and (.threats|length) > 0) then
+      (.threats[0].confidence // "")
+    else
+      ""
+    end
+  ' <<<"${scan_response}" 2>/dev/null || true
+)"
+top_evidence="$(
+  jq -r '
+    if ((.threats|type)=="array" and (.threats|length) > 0) then
+      (.threats[0].evidence // "")
+    else
+      ""
+    end
+  ' <<<"${scan_response}" 2>/dev/null || true
+)"
+
+confidence_pct=""
+if is_number "${top_confidence}"; then
+  confidence_pct="$(awk -v c="${top_confidence}" 'BEGIN{printf "%.0f", c*100}')"
+elif is_number "${risk_score}"; then
+  # Some scanners return a 0-100 style score instead of 0-1 confidence.
+  confidence_pct="$(printf '%.0f' "${risk_score}" 2>/dev/null || true)"
+fi
+
 scanned_file_note=""
 if [[ -n "${scanned_file_basename}" ]]; then
   scanned_file_note=" (${scanned_file_basename})"
@@ -514,7 +652,50 @@ top_category="$(
 )"
 reason_human="$(humanize_reason "${reason}" "${top_category}")"
 
-case "${decision_upper}" in
+evidence_excerpt=""
+if [[ "${scan_backend}" == "mighty-gateway" && -n "${scanned_file_basename}" && -n "${top_evidence}" ]]; then
+  evidence_excerpt="$(truncate_one_line "${top_evidence}" 140)"
+
+  # Never include secret-looking strings in evidence.
+  if printf '%s' "${evidence_excerpt}" | LC_ALL=C grep -Eq 'AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9]{20,}'; then
+    evidence_excerpt=""
+  fi
+
+  case "${top_category}" in
+    *credential* | *secret* | *api_key* | *token* | *key*)
+      evidence_excerpt=""
+      ;;
+  esac
+fi
+
+decision_effective="${decision_upper}"
+threshold_mode="${MIGHTY_THRESHOLD_MODE:-0}"
+warn_pct="${MIGHTY_WARN_CONFIDENCE_PCT:-60}"
+block_pct="${MIGHTY_BLOCK_CONFIDENCE_PCT:-90}"
+
+# Optional: override ALLOW/WARN/BLOCK using confidence percentage (Gateway only).
+# This is useful if you want a "WARN range" where Cline can surface an approve/deny UI.
+if [[ "${scan_backend}" == "mighty-gateway" && "${threshold_mode}" == "1" && "${confidence_pct}" =~ ^[0-9]+$ && "${warn_pct}" =~ ^[0-9]+$ && "${block_pct}" =~ ^[0-9]+$ ]]; then
+  if ((confidence_pct >= block_pct)); then
+    decision_effective="BLOCK"
+  elif ((confidence_pct >= warn_pct)); then
+    decision_effective="WARN"
+  else
+    decision_effective="ALLOW"
+  fi
+fi
+
+debug_scan_decision="${decision_effective}"
+debug_scan_category="${top_category}"
+debug_scan_confidence_pct="${confidence_pct}"
+debug_scan_risk_score="${risk_score}"
+debug_scan_file="${scanned_file_basename}"
+debug_scan_evidence="${evidence_excerpt}"
+debug_scan_scan_id="$(
+  jq -r '(.scan_id // .result.scan_id // "")' <<<"${scan_response}" 2>/dev/null || true
+)"
+
+case "${decision_effective}" in
   BLOCK)
     if [[ -z "${reason_human}" ]]; then
       reason_human="policy violation"
@@ -525,7 +706,14 @@ case "${decision_upper}" in
       backend_label="Mighty Gateway (multimodal)"
     fi
 
-    msg="Blocked ${tool} by ${backend_label}: ${reason_human}${scanned_file_note}"
+    msg="Mighty Guardrails blocked ${tool} via ${backend_label}: ${reason_human}${scanned_file_note}"
+    if [[ -n "${confidence_pct}" ]]; then
+      msg="${msg} (conf ${confidence_pct}%)"
+    fi
+    if [[ -n "${evidence_excerpt}" ]]; then
+      msg="${msg}. Evidence: ${evidence_excerpt}"
+    fi
+    msg="$(truncate_one_line "${msg}" 260)"
     stderr_log "Mighty Guardrails: ${msg}"
     emit "true" "${msg}" "" "${citadel_used}" "${scan_ok}"
     ;;
@@ -539,7 +727,14 @@ case "${decision_upper}" in
       backend_label="Mighty Gateway (multimodal)"
     fi
 
-    msg="Warning from ${backend_label}: ${reason_human}${scanned_file_note}"
+    msg="Mighty Guardrails warning via ${backend_label}: ${reason_human}${scanned_file_note}"
+    if [[ -n "${confidence_pct}" ]]; then
+      msg="${msg} (conf ${confidence_pct}%)"
+    fi
+    if [[ -n "${evidence_excerpt}" ]]; then
+      msg="${msg}. Evidence: ${evidence_excerpt}"
+    fi
+    msg="$(truncate_one_line "${msg}" 260)"
     stderr_log "Mighty Guardrails: ${msg}"
     emit "false" "" "${msg}" "${citadel_used}" "${scan_ok}"
     ;;

@@ -8,6 +8,47 @@
 
 set -euo pipefail
 
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+load_dotenv_value() {
+  # Best-effort, non-executing .env parser for a single key.
+  local key="$1"
+  local file="$2"
+  [[ -f "${file}" ]] || return 1
+
+  local line val
+  line="$(LC_ALL=C grep -E "^[[:space:]]*(export[[:space:]]+)?${key}[[:space:]]*=" "${file}" 2>/dev/null | tail -n 1 || true)"
+  [[ -z "${line}" ]] && return 1
+
+  line="${line#export }"
+  val="${line#*=}"
+  val="${val%%$'\r'}"
+
+  # Strip inline comments for unquoted values.
+  if [[ "${val}" != \"*\" && "${val}" != \'*\' ]]; then
+    val="${val%%#*}"
+  fi
+
+  val="$(printf '%s' "${val}" | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//')"
+  if [[ "${val}" =~ ^\".*\"$ ]]; then
+    val="${val:1:${#val}-2}"
+  elif [[ "${val}" =~ ^\'.*\'$ ]]; then
+    val="${val:1:${#val}-2}"
+  fi
+
+  printf '%s' "${val}"
+}
+
+if [[ -z "${MIGHTY_API_KEY:-}" ]]; then
+  for f in "${ROOT_DIR}/.env" "${ROOT_DIR}/.env.local" "${HOME}/Documents/Cline/.env" "${HOME}/.env"; do
+    key="$(load_dotenv_value "MIGHTY_API_KEY" "${f}" || true)"
+    if [[ -n "${key}" ]]; then
+      export MIGHTY_API_KEY="${key}"
+      break
+    fi
+  done
+fi
+
 if ! command -v jq >/dev/null 2>&1; then
   echo "Missing dependency: jq" >&2
   exit 1
@@ -127,4 +168,3 @@ jq '{
   scan_status,
   threats: (.threats // [])
 }' <"${resp_file}"
-
