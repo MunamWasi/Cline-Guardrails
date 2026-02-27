@@ -3,10 +3,12 @@
 ## Fast path
 
 ```bash
-cd /absolute/path/to/cline-mighty-guardrails/Cline-Hackathon
-./scripts/setup.sh
+cd <REPO_ROOT>
+./install.sh
 ./scripts/demo-local.sh
 ```
+
+`./install.sh` wires hooks, prepares `.env`, and runs smoke tests.
 
 Expected:
 - unsafe `curl | sh` input is blocked
@@ -21,10 +23,10 @@ Expected:
 # build once
 git clone https://github.com/TryMightyAI/citadel
 cd citadel
-go build -o /absolute/path/to/cline-mighty-guardrails/Cline-Hackathon/bin/citadel ./cmd/gateway
+go build -o <REPO_ROOT>/bin/citadel ./cmd/gateway
 
 # run sidecar
-cd /absolute/path/to/cline-mighty-guardrails/Cline-Hackathon
+cd <REPO_ROOT>
 ./scripts/run-citadel.sh
 ```
 
@@ -50,11 +52,11 @@ MIGHTY_BLOCK_THRESHOLD=0.85
 Multimodal test:
 
 ```bash
-./scripts/test-mighty-multimodal.sh /absolute/path/to/file.png
+./scripts/test-mighty-multimodal.sh <PATH_TO_IMAGE_OR_PDF>
 ```
 
 ## Hook scripts to use in Cline
 
 Use the robust runner, not the raw scanner:
-- `/absolute/path/to/cline-mighty-guardrails/Cline-Hackathon/scripts/cline-pretooluse.sh`
-- `/absolute/path/to/cline-mighty-guardrails/Cline-Hackathon/scripts/cline-taskcancel.sh`
+- `<REPO_ROOT>/scripts/cline-pretooluse.sh`
+- `<REPO_ROOT>/scripts/cline-taskcancel.sh`

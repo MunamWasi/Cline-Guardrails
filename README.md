@@ -23,6 +23,26 @@ Run prerequisite check:
 ./scripts/setup.sh
 ```
 
+## Super Easy Install (Recommended)
+
+From repo root:
+
+```bash
+chmod +x ./install.sh
+./install.sh
+```
+
+What this does:
+- installs `PreToolUse` + `TaskCancel` into `~/Documents/Cline/Hooks` (or `CLINE_HOOKS_DIR`)
+- creates `.env` from template/example if missing
+- runs a local smoke test (block + allow)
+
+Custom hooks directory:
+
+```bash
+./install.sh --hooks-dir "/absolute/path/to/Hooks"
+```
+
 ## Environment Setup (.env only)
 
 Never store keys in `settings.json` or JSON config files.
@@ -52,7 +72,7 @@ Build Citadel binary into this repo:
 ```bash
 git clone https://github.com/TryMightyAI/citadel
 cd citadel
-go build -o /absolute/path/to/cline-mighty-guardrails/Cline-Hackathon/bin/citadel ./cmd/gateway
+go build -o <REPO_ROOT>/bin/citadel ./cmd/gateway
 ```
 
 Start local sidecar:
@@ -96,6 +116,8 @@ This runs three cases through the guardrails logic:
 
 ## Cline Setup (Hooks UI)
 
+If you used `./install.sh`, these files are already written for you. This section is only for manual setup.
+
 ### 1) Open Cline panel in VS Code
 
 - Click the Cline icon in the left activity bar, or
@@ -105,22 +127,22 @@ This runs three cases through the guardrails logic:
 
 ```bash
 #!/usr/bin/env bash
-exec "/absolute/path/to/cline-mighty-guardrails/Cline-Hackathon/scripts/cline-pretooluse.sh"
+exec "<REPO_ROOT>/scripts/cline-pretooluse.sh"
 ```
 
 ### 3) In Cline -> Hooks -> Global Hooks -> `TaskCancel`, paste exactly
 
 ```bash
 #!/usr/bin/env bash
-exec "/absolute/path/to/cline-mighty-guardrails/Cline-Hackathon/scripts/cline-taskcancel.sh"
+exec "<REPO_ROOT>/scripts/cline-taskcancel.sh"
 ```
 
 ### 4) Ensure hook scripts are executable
 
 ```bash
-chmod +x /absolute/path/to/cline-mighty-guardrails/Cline-Hackathon/scripts/cline-pretooluse.sh
-chmod +x /absolute/path/to/cline-mighty-guardrails/Cline-Hackathon/scripts/cline-taskcancel.sh
-chmod +x /absolute/path/to/cline-mighty-guardrails/Cline-Hackathon/scripts/mighty-guardrails
+chmod +x <REPO_ROOT>/scripts/cline-pretooluse.sh
+chmod +x <REPO_ROOT>/scripts/cline-taskcancel.sh
+chmod +x <REPO_ROOT>/scripts/mighty-guardrails
 ```
 
 ## What You Should See in Cline
@@ -151,6 +173,7 @@ chmod +x /absolute/path/to/cline-mighty-guardrails/Cline-Hackathon/scripts/might
 
 ```bash
 ./scripts/test-cline-pretooluse.sh
+./scripts/test-install.sh
 ```
 
 Covers:
@@ -158,3 +181,27 @@ Covers:
 - warn/block threshold routing
 - allow silence (no stdout)
 - host guardrails label routing
+- installer workflow
+
+## Create a Shareable Package
+
+```bash
+./scripts/package-release.sh
+```
+
+Outputs:
+- `dist/mighty-guardrails-cline_<timestamp>.tar.gz`
+- `dist/...sha256` (if `shasum` exists)
+
+## Public Consumption Quickstart
+
+```bash
+git clone https://github.com/<YOUR_ORG_OR_USER>/<YOUR_REPO>.git
+cd <YOUR_REPO>
+./install.sh
+```
+
+Then:
+1. Set `MIGHTY_MODE` and `MIGHTY_API_KEY` in `.env` for pro mode.
+2. Keep Cline Global Hooks enabled.
+3. Run `./scripts/demo-local.sh` to validate behavior.

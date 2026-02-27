@@ -1,5 +1,14 @@
 # Cline Hook Setup
 
+## Recommended: auto-install hooks
+
+```bash
+cd <REPO_ROOT>
+./install.sh
+```
+
+If you run this, you can skip the manual hook paste steps below.
+
 ## Open Cline panel
 
 In VS Code:
@@ -12,7 +21,7 @@ In **Cline -> Hooks -> Global Hooks -> PreToolUse**, paste:
 
 ```bash
 #!/usr/bin/env bash
-exec "/absolute/path/to/cline-mighty-guardrails/Cline-Hackathon/scripts/cline-pretooluse.sh"
+exec "<REPO_ROOT>/scripts/cline-pretooluse.sh"
 ```
 
 ## Configure Hook: TaskCancel
@@ -21,15 +30,15 @@ In **Cline -> Hooks -> Global Hooks -> TaskCancel**, paste:
 
 ```bash
 #!/usr/bin/env bash
-exec "/absolute/path/to/cline-mighty-guardrails/Cline-Hackathon/scripts/cline-taskcancel.sh"
+exec "<REPO_ROOT>/scripts/cline-taskcancel.sh"
 ```
 
 ## Make scripts executable
 
 ```bash
-chmod +x /absolute/path/to/cline-mighty-guardrails/Cline-Hackathon/scripts/cline-pretooluse.sh
-chmod +x /absolute/path/to/cline-mighty-guardrails/Cline-Hackathon/scripts/cline-taskcancel.sh
-chmod +x /absolute/path/to/cline-mighty-guardrails/Cline-Hackathon/scripts/mighty-guardrails
+chmod +x <REPO_ROOT>/scripts/cline-pretooluse.sh
+chmod +x <REPO_ROOT>/scripts/cline-taskcancel.sh
+chmod +x <REPO_ROOT>/scripts/mighty-guardrails
 ```
 
 ## Environment rules

@@ -1,5 +1,6 @@
 /.citadel/
 /bin/citadel
+/dist/
 .DS_Store
 
 # Secrets / local env (never commit)
