@@ -65,6 +65,12 @@ Notes:
 - `MIGHTY_MODE=pro` prefers Mighty Gateway.
 - The hook auto-loads `.env` from the workspace root, then falls back to process env.
 
+## Backend Setup Order (Recommended)
+
+1. Set up OSS (Go + local Citadel) first.
+2. Validate with local demo.
+3. Add PRO (Mighty API key / Gateway) after OSS is working.
+
 ## OSS Mode (Local Citadel)
 
 Build Citadel binary into this repo:
@@ -99,7 +105,7 @@ export MIGHTY_PREFER_GATEWAY=1
 Multimodal check helper:
 
 ```bash
-./scripts/test-mighty-multimodal.sh /absolute/path/to/file.png
+./scripts/test-mighty-multimodal.sh <PATH_TO_IMAGE_OR_PDF>
 ```
 
 ## Demo in 60 Seconds

@@ -17,6 +17,11 @@ Expected:
 
 ## Choose backend mode
 
+Recommended order:
+1. Configure OSS mode first (Go + local Citadel).
+2. Verify behavior with the demo.
+3. Configure PRO mode (Gateway + API key) after OSS is confirmed.
+
 ### OSS mode (local Citadel sidecar)
 
 ```bash
