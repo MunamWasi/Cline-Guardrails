@@ -1,36 +1,27 @@
 # Getting Started
 
-## Fast path
+## TL;DR (Copy/Paste)
 
 ```bash
-cd <REPO_ROOT>
+git clone https://github.com/MunamWasi/Cline-Guardrails.git
+cd Cline-Guardrails
 ./install.sh
 ./scripts/demo-local.sh
 ```
 
-`./install.sh` wires hooks, prepares `.env`, and runs smoke tests.
+## Recommended Setup Order
 
-Expected:
-- unsafe `curl | sh` input is blocked
-- secret-looking key write is blocked
-- benign write is allowed
+1. OSS first: build/run local Citadel.
+2. Verify local behavior.
+3. PRO second: add API key for Gateway/multimodal.
 
-## Choose backend mode
-
-Recommended order:
-1. Configure OSS mode first (Go + local Citadel).
-2. Verify behavior with the demo.
-3. Configure PRO mode (Gateway + API key) after OSS is confirmed.
-
-### OSS mode (local Citadel sidecar)
+## OSS Mode (Go + Local Citadel)
 
 ```bash
-# build once
 git clone https://github.com/TryMightyAI/citadel
 cd citadel
 go build -o <REPO_ROOT>/bin/citadel ./cmd/gateway
 
-# run sidecar
 cd <REPO_ROOT>
 ./scripts/run-citadel.sh
 ```
@@ -43,7 +34,7 @@ MIGHTY_WARN_THRESHOLD=0.70
 MIGHTY_BLOCK_THRESHOLD=0.85
 ```
 
-### PRO mode (Mighty Gateway API key)
+## PRO Mode (Gateway + API Key)
 
 Use `.env`:
 
@@ -60,8 +51,7 @@ Multimodal test:
 ./scripts/test-mighty-multimodal.sh <PATH_TO_IMAGE_OR_PDF>
 ```
 
-## Hook scripts to use in Cline
+## Manual Hook Targets (if you skip installer)
 
-Use the robust runner, not the raw scanner:
 - `<REPO_ROOT>/scripts/cline-pretooluse.sh`
 - `<REPO_ROOT>/scripts/cline-taskcancel.sh`
